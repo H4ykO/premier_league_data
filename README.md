@@ -2,6 +2,8 @@
 
 Pipeline de dados completo para coleta, transformação, armazenamento e análise de dados da Premier League, com dashboard interativo e modelo preditivo de resultados.
 
+Link Streamlit Cloud app: https://premierleaguedata-fnk2qmdraacovckfse8sft.streamlit.app/
+
 ---
 
 ## Projeto
