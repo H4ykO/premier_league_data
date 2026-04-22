@@ -158,6 +158,12 @@ streamlit run dashboard/app.py
 
 O projeto conta com testes automatizados cobrindo as camadas de ingestão e transformação.
 
+### CI — Integração Contínua
+
+O projeto utiliza **GitHub Actions** para rodar os testes automaticamente a cada push na branch `main`, garantindo que nenhuma alteração quebre o pipeline.
+
+![Tests](https://github.com/H4ykO/premier-league-pipeline/actions/workflows/tests.yml/badge.svg)
+
 ### Rodar os testes
 
 ```bash
