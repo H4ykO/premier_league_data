@@ -10,7 +10,7 @@ Link Streamlit Cloud app: https://premierleaguedata-fnk2qmdraacovckfse8sft.strea
 
 Este projeto foi desenvolvido como parte de um portfólio de Engenharia e Análise de Dados, com o objetivo de demonstrar habilidades em construção de pipelines ETL, modelagem de dados, visualização e Machine Learning aplicados a dados reais de futebol.
 
-Os dados são coletados automaticamente da API [football-data.org](https://www.football-data.org), transformados com Python e armazenados em um banco PostgreSQL. Um dashboard interativo permite explorar classificação, resultados e prever o desfecho de partidas com base em um modelo simples de Machine Learning.
+Os dados são coletados automaticamente da API [football-data.org](https://www.football-data.org), transformados com Python e armazenados em um banco PostgreSQL na nuvem via Supabase. Um dashboard interativo permite explorar classificação, resultados e prever o desfecho de partidas com base em um modelo simples de Machine Learning.
 
 ---
 
@@ -23,7 +23,7 @@ football-data.org API
         ↓
   Transformação (Pandas)
         ↓
-   PostgreSQL (armazenamento)
+   PostgreSQL - Supabase (armazenamento na nuvem)
         ↓
   Streamlit (dashboard + modelo preditivo)
 ```
@@ -37,6 +37,7 @@ football-data.org API
 - **Histórico de partidas** — resultados de todos os jogos da temporada
 - **Modelo preditivo** — previsão de resultados com probabilidades usando Regressão Logística
 - **Features inteligentes** — modelo considera posição na tabela e média de gols dos últimos 5 jogos
+- **Testes automatizados** — cobertura de testes com pytest para transformações e ingestão de dados
 
 ---
 
@@ -47,9 +48,11 @@ football-data.org API
 | Python 3.14 | Linguagem principal |
 | Pandas | Transformação e manipulação de dados |
 | PostgreSQL | Armazenamento dos dados |
+| Supabase | Banco de dados PostgreSQL na nuvem |
 | SQLAlchemy | Conexão com o banco de dados |
 | Scikit-learn | Modelo preditivo (Regressão Logística) |
 | Streamlit | Dashboard interativo |
+| pytest | Testes automatizados |
 | python-dotenv | Gerenciamento de variáveis de ambiente |
 
 ---
@@ -78,6 +81,11 @@ premier-league-pipeline/
 ├── model/
 │   └── predict.py           # Modelo preditivo
 │
+├── tests/
+│   ├── __init__.py
+│   ├── test_transform.py    # Testes de transformação
+│   └── test_fetch.py        # Testes de ingestão
+│
 ├── pipeline.py              # Orquestra o pipeline completo
 ├── requirements.txt         # Dependências do projeto
 └── README.md
@@ -90,13 +98,13 @@ premier-league-pipeline/
 ### Pré-requisitos
 
 - Python 3.10+
-- PostgreSQL instalado e rodando
+- PostgreSQL instalado e rodando (ou conta no [Supabase](https://supabase.com))
 - Chave de API gratuita do [football-data.org](https://www.football-data.org)
 
 ### 1. Clone o repositório
 
 ```bash
-git clone https://github.com/seu-usuario/premier-league-pipeline.git
+git clone https://github.com/H4ykO/premier-league-pipeline.git
 cd premier-league-pipeline
 ```
 
@@ -116,6 +124,7 @@ DB_USER=seu_usuario
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=premier_league
+DB_PASSWORD=sua_senha
 ```
 
 ### 4. Crie o banco de dados
@@ -145,6 +154,27 @@ streamlit run dashboard/app.py
 
 ---
 
+## Testes
+
+O projeto conta com testes automatizados cobrindo as camadas de ingestão e transformação.
+
+### Rodar os testes
+
+```bash
+pytest tests/ -v
+```
+
+### Cobertura dos testes
+
+| Arquivo | O que é testado |
+|---------|----------------|
+| `test_transform.py` | Cálculo de goal difference, win rate, classificação de resultados e filtragem de jogos |
+| `test_fetch.py` | Estrutura do DataFrame retornado, colunas corretas e mapeamento do JSON da API |
+
+Os testes de ingestão utilizam **Mock** para simular as respostas da API sem realizar chamadas reais, garantindo testes rápidos e independentes de conectividade.
+
+---
+
 ## Modelo Preditivo
 
 O modelo utiliza **Regressão Logística** treinada com o histórico de partidas da temporada atual. As features utilizadas são:
@@ -160,8 +190,6 @@ O modelo utiliza **Regressão Logística** treinada com o histórico de partidas
 
 **Acurácia atual:** ~61% — acima do baseline aleatório (33%) e compatível com a complexidade inerente de prever resultados de futebol.
 
-> O modelo é um baseline intencional. Melhorias futuras incluem uso de múltiplas temporadas, XGBoost e dados de forma recente dos times.
-
 ---
 
 ## Dependências
@@ -174,6 +202,7 @@ psycopg2-binary
 streamlit
 scikit-learn
 python-dotenv
+pytest
 ```
 
 Instale tudo com:

@@ -25,7 +25,7 @@ st.title('📊 Premier League 2025/2026')
 #Classification
 st.subheader('Classificação Atual')
 standings = pd.read_sql('SELECT * FROM standings ORDER BY position', engine)
-st.dataframe(standings, use_container_width=True)
+st.dataframe(standings, width='stretch')
 
 #Points
 st.subheader('Top 10 Times por Pontos')
@@ -35,7 +35,7 @@ st.bar_chart(top10.set_index('team')['points'])
 #Last games
 st.subheader('Últimos Jogos')
 matches = pd.read_sql('SELECT * FROM matches ORDER BY date DESC LIMIT 10', engine)
-st.dataframe(matches, use_container_width=True)
+st.dataframe(matches, width='stretch')
 
 #Forecast
 st.subheader('Previsão de Resultados')
