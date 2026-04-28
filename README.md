@@ -194,7 +194,7 @@ O modelo utiliza **Regressão Logística** treinada com o histórico de partidas
 | `away_avg_scored` | Média de gols marcados (visitante) — últimos 5 jogos |
 | `away_avg_conceded` | Média de gols sofridos (visitante) — últimos 5 jogos |
 
-**Acurácia atual:** ~61% — acima do baseline aleatório (33%) e compatível com a complexidade inerente de prever resultados de futebol.
+**Acurácia atual:** ~59% — acima do baseline aleatório (33%) e compatível com a complexidade inerente de prever resultados de futebol.
 
 ---
 

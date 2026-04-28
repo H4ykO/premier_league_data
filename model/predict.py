@@ -2,8 +2,8 @@ from pyexpat import features
 import pandas as pd
 import numpy as np
 import os
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import StandardScaler
+from xgboost import XGBClassifier
+from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sqlalchemy import create_engine
@@ -76,40 +76,48 @@ def build_features(matches, standings):
         away_pos = get_position(standings, away_team)
 
         features.append([
-            home_pos, 
+            home_pos,
             away_pos,
             home_scored,
             home_conceded,
             away_scored,
             away_conceded,
-             ])
+        ])
         labels.append(row['result'])
 
     return pd.DataFrame(features, columns=[
         'home_position', 'away_position',
         'home_avg_scored', 'home_avg_conceded',
-        'away_avg_scored', 'away_avg_conceded'  
+        'away_avg_scored', 'away_avg_conceded'
     ]), labels
 
 def train_model():
     matches, standings = load_data()
     X, y = build_features(matches, standings)
 
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
+    le = LabelEncoder()
+    y_encoded = le.fit_transform(y)
 
-    X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size=0.2, random_state=42)
 
-    model = LogisticRegression(max_iter=500)
+    model = XGBClassifier(
+        n_estimators=50,        
+        max_depth=2,            
+        learning_rate=0.05,     
+        subsample=0.8,          
+        colsample_bytree=0.8,  
+        eval_metric='mlogloss',
+        random_state=42
+)
     model.fit(X_train, y_train)
 
     y_pred = model.predict(X_test)
     acc = accuracy_score(y_test, y_pred)
     print(f'Accuracy: {acc:.2f}')
 
-    return model, scaler, matches, standings
+    return model, le, matches, standings
 
-def predict_match(model, scaler, matches, standings, home_team, away_team):
+def predict_match(model, le, matches, standings, home_team, away_team):
     today = pd.Timestamp.now()
 
     home_scored, home_conceded = calc_goals_avg(matches, home_team, today)
@@ -126,16 +134,12 @@ def predict_match(model, scaler, matches, standings, home_team, away_team):
         away_conceded
     ]]
 
-    features_scaled = scaler.transform(features)
+    prediction_encoded = model.predict(features)[0]
+    prediction = le.inverse_transform([prediction_encoded])[0]
 
-    prediction = model.predict(features_scaled)[0].item()
-    probability = model.predict_proba(features_scaled)[0]
-    classes = model.classes_
+    probability = model.predict_proba(features)[0]
+    classes = le.inverse_transform(range(len(le.classes_)))
 
     proba_dict = {cls: round(prob * 100, 1) for cls, prob in zip(classes, probability)}
 
     return prediction, proba_dict
-
-
-
-

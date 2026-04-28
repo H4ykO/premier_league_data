@@ -44,14 +44,14 @@ st.subheader('Previsão de Resultados')
 def get_model():
     return train_model()
 
-model, scaler, matches, standings = get_model()
+model, le, matches, standings = get_model()
 
 teams = standings['team'].tolist()
 home = st.selectbox('Time da Casa', teams)
 away = st.selectbox('Time Visitante', [t for t in teams if t != home])
 
 if st.button('Prever Resultado'):
-    prediction, probabilities = predict_match(model, scaler, matches, standings, home, away)
+    prediction, probabilities = predict_match(model, le, matches, standings, home, away)
 
     result_map = {
         "HOME": f"🏠 Vitória do {home}",
@@ -63,9 +63,9 @@ if st.button('Prever Resultado'):
 
     st.write('Probabilidades:')
     col1, col2, col3 = st.columns(3)
-    col1.metric(f"🏠 {home}", f"{probabilities.get('HOME', 0)}%")
-    col2.metric("🤝 Empate", f"{probabilities.get('DRAW', 0)}%")
-    col3.metric(f"✈️ {away}", f"{probabilities.get('AWAY', 0)}%")
+    col1.metric(f"🏠 {home}", f"{probabilities.get('HOME', 0):.2f}%")
+    col2.metric("🤝 Empate", f"{probabilities.get('DRAW', 0):.2f}%")
+    col3.metric(f"✈️ {away}", f"{probabilities.get('AWAY', 0):.2f}%")
 
     st.write('Features usadas para previsão:')
     pos_col1, pos_col2 = st.columns(2)
