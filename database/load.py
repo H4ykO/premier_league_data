@@ -1,5 +1,7 @@
 import os
-from sqlalchemy import create_engine
+import sqlalchemy as sa
+from sqlalchemy import create_engine, text
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -14,8 +16,18 @@ engine = create_engine(
     f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require"
 )
 
-def load_to_db(df, table_name):
-    df.to_sql(table_name, engine, if_exists='replace', index=False)
-    print(f'✅ {len(df)} registros carregados em {table_name}')
 
+def upsert(df, table_name: str, conflict_cols: list[str]) -> None:
+    meta = sa.MetaData()
+    meta.reflect(bind=engine, only=[table_name])
+    table = meta.tables[table_name]
 
+    records = df.to_dict(orient='records')
+    with engine.begin() as conn:
+        for batch_start in range(0, len(records), 500):
+            batch = records[batch_start:batch_start + 500]
+            stmt = pg_insert(table).values(batch)
+            update_cols = {col: stmt.excluded[col] for col in df.columns if col not in conflict_cols}
+            stmt = stmt.on_conflict_do_update(index_elements=conflict_cols, set_=update_cols)
+            conn.execute(stmt)
+    print(f'✅ {len(df)} registros upserted em {table_name}')

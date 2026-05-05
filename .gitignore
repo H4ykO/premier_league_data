@@ -1,3 +1,7 @@
 .env
-test.ipynb 
+test.ipynb
 .DS_Store
+__pycache__/
+*.pyc
+.pytest_cache/
+.claude/

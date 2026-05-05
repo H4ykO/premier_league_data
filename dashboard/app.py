@@ -1,11 +1,12 @@
 import sys
 import os
+import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dotenv import load_dotenv
 import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine
-from model.predict import train_model, predict_match
+from model.predict import train_model, predict_match, calc_goals_avg, calc_form, calc_venue_win_rate
 
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
 
@@ -19,39 +20,50 @@ engine = create_engine(
     f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require"
 )
 
+
+def _current_season():
+    today = datetime.date.today()
+    return today.year if today.month >= 8 else today.year - 1
+
+
+season = _current_season()
 st.set_page_config(page_title='Premier League Dashboard', page_icon='⚽')
-st.title('📊 Premier League 2025/2026')
+st.title(f'📊 Premier League {season}/{season + 1}')
 
-#Classification
+# Classificação — só temporada corrente
 st.subheader('Classificação Atual')
-standings = pd.read_sql('SELECT * FROM standings ORDER BY position', engine)
-st.dataframe(standings, width='stretch')
+standings = pd.read_sql(
+    'SELECT * FROM standings WHERE season = (SELECT MAX(season) FROM standings) ORDER BY position',
+    engine
+)
+st.dataframe(standings, use_container_width=True)
 
-#Points
+# Top 10
 st.subheader('Top 10 Times por Pontos')
-top10 = standings.head(10)
-st.bar_chart(top10.set_index('team')['points'])
+st.bar_chart(standings.head(10).set_index('team')['points'])
 
-#Last games
+# Últimos jogos
 st.subheader('Últimos Jogos')
-matches = pd.read_sql('SELECT * FROM matches ORDER BY date DESC LIMIT 10', engine)
-st.dataframe(matches, width='stretch')
+matches_db = pd.read_sql('SELECT * FROM matches ORDER BY date DESC LIMIT 10', engine)
+st.dataframe(matches_db, use_container_width=True)
 
-#Forecast
+# Previsão
 st.subheader('Previsão de Resultados')
+
 
 @st.cache_resource
 def get_model():
     return train_model()
 
-model, le, matches, standings = get_model()
+
+model, le, matches = get_model()
 
 teams = standings['team'].tolist()
 home = st.selectbox('Time da Casa', teams)
 away = st.selectbox('Time Visitante', [t for t in teams if t != home])
 
 if st.button('Prever Resultado'):
-    prediction, probabilities = predict_match(model, le, matches, standings, home, away)
+    prediction, probabilities = predict_match(model, le, matches, home, away)
 
     result_map = {
         "HOME": f"🏠 Vitória do {home}",
@@ -63,11 +75,27 @@ if st.button('Prever Resultado'):
 
     st.write('Probabilidades:')
     col1, col2, col3 = st.columns(3)
-    col1.metric(f"🏠 {home}", f"{probabilities.get('HOME', 0):.2f}%")
-    col2.metric("🤝 Empate", f"{probabilities.get('DRAW', 0):.2f}%")
-    col3.metric(f"✈️ {away}", f"{probabilities.get('AWAY', 0):.2f}%")
+    col1.metric(f"🏠 {home}", f"{probabilities.get('HOME', 0):.1f}%")
+    col2.metric("🤝 Empate", f"{probabilities.get('DRAW', 0):.1f}%")
+    col3.metric(f"✈️ {away}", f"{probabilities.get('AWAY', 0):.1f}%")
 
-    st.write('Features usadas para previsão:')
-    pos_col1, pos_col2 = st.columns(2)
-    pos_col1.metric("📍 Posição (casa)", int(standings[standings['team'] == home]['position'].values[0]))
-    pos_col2.metric("📍 Posição (visitante)", int(standings[standings['team'] == away]['position'].values[0]))
+    today = pd.Timestamp.now()
+    st.write('**Features usadas para previsão:**')
+
+    c1, c2 = st.columns(2)
+    c1.metric("📍 Posição Casa", int(standings[standings['team'] == home]['position'].values[0]))
+    c2.metric("📍 Posição Visitante", int(standings[standings['team'] == away]['position'].values[0]))
+
+    h_scored, h_conc = calc_goals_avg(matches, home, today)
+    a_scored, a_conc = calc_goals_avg(matches, away, today)
+    c3, c4 = st.columns(2)
+    c3.metric("⚽ Gols/jogo Casa", h_scored)
+    c4.metric("⚽ Gols/jogo Visitante", a_scored)
+
+    c5, c6 = st.columns(2)
+    c5.metric("📈 Forma Casa (pts)", calc_form(matches, home, today))
+    c6.metric("📈 Forma Visitante (pts)", calc_form(matches, away, today))
+
+    c7, c8 = st.columns(2)
+    c7.metric("🏟️ Win Rate Casa em Casa", f"{calc_venue_win_rate(matches, home, today, 'home'):.0%}")
+    c8.metric("✈️ Win Rate Visitante Fora", f"{calc_venue_win_rate(matches, away, today, 'away'):.0%}")

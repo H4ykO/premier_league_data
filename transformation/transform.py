@@ -17,4 +17,4 @@ def transform_matches(df):
         return 'DRAW'
     
     df['result'] = df.apply(get_result, axis=1)
-    return df
+    return df.drop(columns=['status'])
